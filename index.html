@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kalkulator Siklus Tidur</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a; /* Slate 900 */
+            color: #f8fafc; /* Slate 50 */
+        }
+        
+        /* Custom Scrollbar for the seek bar */
+        .scrollbar-hide::-webkit-scrollbar {
+            height: 8px;
+        }
+        .scrollbar-hide::-webkit-scrollbar-track {
+            background: #1e293b; 
+            border-radius: 4px;
+        }
+        .scrollbar-hide::-webkit-scrollbar-thumb {
+            background: #4f46e5; 
+            border-radius: 4px;
+        }
+        .scrollbar-hide::-webkit-scrollbar-thumb:hover {
+            background: #6366f1; 
+        }
+
+        .glow-optimal {
+            box-shadow: 0 0 15px 2px rgba(34, 197, 94, 0.6);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col items-center py-10 px-4">
+
+    <!-- Header Section -->
+    <div class="text-center w-full max-w-2xl mb-8">
+        <div class="flex justify-center mb-4">
+            <!-- Moon Icon -->
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+            </svg>
+        </div>
+        <h1 class="text-3xl md:text-4xl font-bold mb-2">Kalkulator Bangun Tidur</h1>
+        <p class="text-slate-400 text-sm md:text-base">
+            Hitung waktu bangun idealmu. Manusia tidur dalam siklus 90 menit. Bangun di akhir siklus membuatmu merasa lebih segar!
+        </p>
+    </div>
+
+    <!-- Input Section -->
+    <div class="bg-slate-800 p-6 rounded-2xl shadow-xl w-full max-w-md border border-slate-700 mb-10">
+        <label for="sleepTime" class="block text-sm font-medium text-slate-300 mb-2">Saya berencana tidur pada jam:</label>
+        <div class="flex flex-col sm:flex-row gap-4">
+            <input type="time" id="sleepTime" class="flex-1 bg-slate-900 border border-slate-600 text-white rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-lg" required>
+            <button onclick="calculateCycles()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-3 px-6 rounded-lg transition duration-200 shadow-lg shadow-indigo-500/30">
+                Hitung
+            </button>
+        </div>
+        <p id="errorMsg" class="text-red-400 text-sm mt-2 hidden transition-all">Silakan masukkan waktu tidur terlebih dahulu.</p>
+        <p class="text-xs text-slate-500 mt-4 text-center">*Asumsi waktu untuk mulai tertidur adalah 15 menit.</p>
+    </div>
+
+    <!-- Results Section (Seek Bar / Timeline) -->
+    <div id="resultContainer" class="w-full max-w-6xl hidden opacity-0 transition-opacity duration-500">
+        <h2 class="text-xl font-semibold mb-6 text-center text-indigo-300">Rekomendasi Waktu Bangun</h2>
+        
+        <!-- Optimal legend -->
+        <div class="flex justify-center items-center gap-4 mb-6 text-sm">
+            <div class="flex items-center gap-2">
+                <div class="w-3 h-3 rounded-full bg-green-500"></div>
+                <span class="text-slate-300">Waktu Ideal (5-6 Siklus)</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="w-3 h-3 rounded-full bg-indigo-500"></div>
+                <span class="text-slate-300">Siklus Lainnya</span>
+            </div>
+        </div>
+
+        <!-- The Timeline (Seek Bar) -->
+        <div class="w-full overflow-x-auto scrollbar-hide pb-8 pt-4 px-4 bg-slate-800/50 rounded-2xl border border-slate-700">
+            <div class="flex relative w-max min-w-full items-center px-4" id="timelineNodes">
+                <!-- Line connecting nodes -->
+                <div class="absolute top-1/2 left-0 w-full h-1 bg-slate-600 -translate-y-1/2 z-0"></div>
+                
+                <!-- Nodes will be injected here via JS -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function formatTime(date) {
+            return date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', hour12: false });
+        }
+
+        function calculateCycles() {
+            const timeInput = document.getElementById('sleepTime').value;
+            const errorMsg = document.getElementById('errorMsg');
+            
+            if (!timeInput) {
+                // Mengganti alert() dengan pesan inline
+                errorMsg.classList.remove('hidden');
+                return;
+            } else {
+                errorMsg.classList.add('hidden');
+            }
+
+            const [hours, minutes] = timeInput.split(':');
+            
+            // Set base date
+            let baseDate = new Date();
+            baseDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+
+            // Timeline container
+            const timelineContainer = document.getElementById('timelineNodes');
+            
+            // Clear previous results but keep the background line
+            timelineContainer.innerHTML = '<div class="absolute top-1/2 left-0 w-full h-1 bg-slate-700 -translate-y-1/2 z-0"></div>';
+
+            // 1. Node: Waktu Tidur
+            addNode(timelineContainer, {
+                title: "Mulai Tidur",
+                time: formatTime(baseDate),
+                subtitle: "0 Menit",
+                isBase: true
+            });
+
+            // Add 15 minutes to fall asleep
+            let sleepDate = new Date(baseDate.getTime());
+            sleepDate.setMinutes(sleepDate.getMinutes() + 15);
+
+            // 2. Node: Tertidur (+15 min)
+            addNode(timelineContainer, {
+                title: "Tertidur",
+                time: formatTime(sleepDate),
+                subtitle: "+15 Menit",
+                isBase: true
+            });
+
+            // Generate 8 cycles
+            let currentDate = new Date(sleepDate.getTime());
+            for (let i = 1; i <= 8; i++) {
+                currentDate.setMinutes(currentDate.getMinutes() + 90);
+                
+                const isOptimal = (i === 5 || i === 6); // 7.5 hours or 9 hours
+                const hoursSlept = (i * 1.5);
+                
+                addNode(timelineContainer, {
+                    title: `Siklus ${i}`,
+                    time: formatTime(currentDate),
+                    subtitle: `${hoursSlept} Jam`,
+                    isOptimal: isOptimal
+                });
+            }
+
+            // Show results with fade in
+            const resultSection = document.getElementById('resultContainer');
+            resultSection.classList.remove('hidden');
+            // Small delay to allow display:block to apply before changing opacity
+            setTimeout(() => {
+                resultSection.classList.remove('opacity-0');
+                resultSection.classList.add('opacity-100');
+            }, 50);
+        }
+
+        function addNode(container, data) {
+            const nodeDiv = document.createElement('div');
+            nodeDiv.className = "relative z-10 flex flex-col items-center w-32 shrink-0 group cursor-default";
+            
+            // Styling based on node type
+            let dotColor = "bg-slate-500";
+            let dotBorder = "border-slate-800";
+            let titleColor = "text-slate-400";
+            let timeColor = "text-white";
+            let extraDotClasses = "";
+            let scaleEffect = "group-hover:scale-110 transition-transform duration-300";
+
+            if (data.isOptimal) {
+                dotColor = "bg-green-500";
+                titleColor = "text-green-400 font-semibold";
+                timeColor = "text-green-300 text-xl font-bold";
+                extraDotClasses = "glow-optimal";
+            } else if (!data.isBase) {
+                dotColor = "bg-indigo-500";
+                titleColor = "text-indigo-300";
+            }
+
+            nodeDiv.innerHTML = `
+                <div class="mb-4 text-sm ${titleColor} whitespace-nowrap">${data.title}</div>
+                
+                <div class="w-6 h-6 rounded-full ${dotColor} border-4 ${dotBorder} ${extraDotClasses} ${scaleEffect} flex items-center justify-center relative">
+                    <!-- Tooltip pointer hidden by default -->
+                    <div class="absolute -top-10 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-700 text-xs px-2 py-1 rounded shadow-lg pointer-events-none whitespace-nowrap">
+                        ${data.subtitle}
+                    </div>
+                </div>
+                
+                <div class="mt-4 text-lg font-bold ${timeColor}">${data.time}</div>
+                <div class="text-xs text-slate-500 mt-1 font-medium">${data.subtitle}</div>
+            `;
+
+            container.appendChild(nodeDiv);
+        }
+    </script>
+</body>
+</html>
